@@ -45,10 +45,20 @@ app.get('/users/:id', async (req, res) => {
 
 // POST /users (thêm user)
 app.post('/users', async (req, res) => {
-  const { name, email, password, score } = req.body;
-  const { data, error } = await supabase.from('users').insert([{ name, email, password, score }]);
+  const { fullName, email, password, token } = req.body;
+
+  // Kiểm tra dữ liệu đầu vào
+  if (!fullName || !email || !password || !token) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // Chèn vào bảng users
+  const { data, error } = await supabase.from('users').insert([
+    { fullName, email, password, token }
+  ]).select().single();
 
   if (error) return res.status(500).json({ error: error.message });
+
   res.status(201).json(data);
 });
 
@@ -149,15 +159,30 @@ app.get('/answers/:id', async (req, res) => {
 
 // POST /answers (thêm answer mới)
 app.post('/answers', async (req, res) => {
-  const { content, question_id, is_correct, user_id } = req.body;
+  const { time, userId, topicId, answers } = req.body;
+
+  // Kiểm tra trường bắt buộc 'time'
+  if (!time) {
+    return res.status(400).json({ error: "'time' field is required" });
+  }
+
   const { data, error } = await supabase
     .from('answers')
-    .insert([{ content, question_id, is_correct, user_id }]);
+    .insert([{
+      time: time,
+      userId: userId || null,
+      topicId: topicId || null,
+      answers: answers || null
+    }])
+    .select()
+    .single();  // Trả về object duy nhất (nếu bạn muốn trả array bỏ .single())
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.status(201).json({ message: 'Answer created', data });
 });
-
 
 // Khởi động server
 const PORT = process.env.PORT || 4000
